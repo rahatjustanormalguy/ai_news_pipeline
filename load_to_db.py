@@ -1,0 +1,58 @@
+import pandas as pd
+import requests
+import os
+import psycopg2
+from dotenv import load_dotenv
+
+# Load API key
+load_dotenv()
+api_key = os.getenv("NEWS_API_KEY")
+
+# Fetch data
+query = "AI model release"
+url = f"https://newsapi.org/v2/everything?q={query}&language=en&sortBy=publishedAt&apiKey={api_key}"
+response = requests.get(url)
+data = response.json()
+
+# Transform data
+df = pd.DataFrame(data['articles'])
+df = df[['title', 'source', 'publishedAt', 'url', 'description']]
+df['source'] = df['source'].apply(lambda x: x['name'])
+df.columns = ['title', 'source', 'published_at', 'url', 'description']
+df = df.dropna(subset=['title'])
+
+# Connect to PostgreSQL
+conn = psycopg2.connect(
+    host="localhost",
+    port=5432,
+    database="ai_news",
+    user="postgres",
+    password="2026"
+)
+
+cursor = conn.cursor()
+
+# Create table if it doesn't exist
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS articles (
+        id SERIAL PRIMARY KEY,
+        title TEXT,
+        source TEXT,
+        published_at TEXT,
+        url TEXT,
+        description TEXT
+    )
+""")
+
+# Insert articles
+for _, row in df.iterrows():
+    cursor.execute("""
+        INSERT INTO articles (title, source, published_at, url, description)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (row['title'], row['source'], row['published_at'], row['url'], row['description']))
+
+conn.commit()
+cursor.close()
+conn.close()
+
+print(f"Done! {len(df)} articles saved to database.")
