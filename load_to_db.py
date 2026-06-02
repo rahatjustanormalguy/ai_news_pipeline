@@ -44,15 +44,36 @@ cursor.execute("""
     )
 """)
 
-# Insert articles
+# # Insert articles
+# for _, row in df.iterrows():
+#     cursor.execute("""
+#         INSERT INTO articles (title, source, published_at, url, description)
+#         VALUES (%s, %s, %s, %s, %s)
+#     """, (row['title'], row['source'], row['published_at'], row['url'], row['description']))
+
+# conn.commit()
+# cursor.close()
+# conn.close()
+
+# print(f"Done! {len(df)} articles saved to database.")
+
+# Insert articles (skip duplicates)
+inserted = 0
+skipped = 0
 for _, row in df.iterrows():
-    cursor.execute("""
-        INSERT INTO articles (title, source, published_at, url, description)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (row['title'], row['source'], row['published_at'], row['url'], row['description']))
+    cursor.execute("SELECT id FROM articles WHERE url = %s", (row['url'],))
+    exists = cursor.fetchone()
+    if not exists:
+        cursor.execute("""
+            INSERT INTO articles (title, source, published_at, url, description)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (row['title'], row['source'], row['published_at'], row['url'], row['description']))
+        inserted += 1
+    else:
+        skipped += 1
 
 conn.commit()
 cursor.close()
 conn.close()
 
-print(f"Done! {len(df)} articles saved to database.")
+print(f"Done! {inserted} new articles inserted, {skipped} duplicates skipped.")
