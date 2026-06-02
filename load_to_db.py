@@ -8,11 +8,30 @@ from dotenv import load_dotenv
 load_dotenv()
 api_key = os.getenv("NEWS_API_KEY")
 
-# Fetch data
-query = "AI model release"
-url = f"https://newsapi.org/v2/everything?q={query}&language=en&sortBy=publishedAt&apiKey={api_key}"
-response = requests.get(url)
-data = response.json()
+# # Fetch data(update1.0)
+# query = "AI model release"
+# url = f"https://newsapi.org/v2/everything?q={query}&language=en&sortBy=publishedAt&apiKey={api_key}"
+# response = requests.get(url)
+# data = response.json()
+topics = [
+    "AI model release",
+    "large language model",
+    "OpenAI",
+    "Google Gemini",
+    "machine learning"
+]
+
+all_articles = []
+
+for topic in topics:
+    url = f"https://newsapi.org/v2/everything?q={topic}&language=en&sortBy=publishedAt&pageSize=20&apiKey={api_key}"
+    response = requests.get(url)
+    data = response.json()
+    if data['status'] == 'ok':
+        all_articles.extend(data['articles'])
+
+data = {'articles': all_articles}
+
 
 # Transform data
 df = pd.DataFrame(data['articles'])
